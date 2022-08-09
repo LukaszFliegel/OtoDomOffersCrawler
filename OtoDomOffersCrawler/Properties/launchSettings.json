@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "OtoDomOffersCrawler": {
+      "commandName": "Project",
+      "commandLineArgs": "csv -f c:\\tmp\\output.csv -u https://www.otodom.pl -r /pl/oferty/sprzedaz/mieszkanie/chorzow?distanceRadius=0&page=1&limit=1000&market=ALL&locations=%5Bcities_6-177%5D&extras=%5B%5D&roomsNumber=%5BTWO%2CONE%5D&buildingType=%5BBLOCK%2CHOUSE%2CRIBBON%2CAPARTMENT%5D&floors=%5BFIRST%5D&viewType=listing"
+    }
+  }
+}
