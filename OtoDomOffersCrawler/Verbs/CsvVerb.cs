@@ -19,8 +19,11 @@ namespace OtoDomOffersCrawler.Verbs
         //[Option('d', "darker", Required = false, HelpText = "Make hover colors darker")]
         //public bool Darker { get; set; }
 
-        [Option('f', "filepath", Required = false, Default = "Result.csv", HelpText = "path for the csv file to generate.")]
-        public string FilePath { get; set; } = "Result.csv";
+        [Option('i', "inputfilepath", Required = false, Default = "input.csv", HelpText = "path for the csv file to read previous reads from")]
+        public string InputFilePath { get; set; } = "input.csv";
+
+        [Option('o', "outputfilepath", Required = false, Default = "output.csv", HelpText = "path for the csv file to generate")]
+        public string OutputFilePath { get; set; } = "output.csv";
 
         //[Option('o', "openFile", Required = false, HelpText = "If true (which is default) generated file will be opened at the end", Default = true)]
         //public bool OpenFile { get; set; }

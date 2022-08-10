@@ -2,8 +2,6 @@
 using HtmlAgilityPack;
 using OtoDomOffersCrawler.Models;
 using OtoDomOffersCrawler.Verbs;
-using RestSharp;
-using System;
 
 namespace OtoDomOffersCrawler 
 {
@@ -24,29 +22,83 @@ namespace OtoDomOffersCrawler
             var doc = web.Load($"{verb.MainUrl}{verb.OffersUrl}");
             var offersAnchorHrefs = doc.DocumentNode.SelectNodes("//div[2][@data-cy='search.listing']/ul/li/a");
 
-            using (var stream = new StreamWriter(verb.FilePath))
-            {
-                await stream.WriteLineAsync(OfferDomainModel.GetCsvHeader());
+            var readOfferModelList = new OfferDomainModelList();
 
-                foreach (var href in offersAnchorHrefs)
+            if (File.Exists(verb.InputFilePath))
+            {
+                using (var stream = new StreamReader(verb.InputFilePath))
                 {
-                    var url = $"{verb.MainUrl}{href.Attributes.Where(p => p.Name == "href").Select(p => p.Value).FirstOrDefault()}";
-                    Console.WriteLine(url);
-                    await DumpOffer(stream, url);
+                    var headerLine = await stream.ReadLineAsync() ?? throw new InvalidOperationException("Csv file does not contain proper header");
+
+                    readOfferModelList = OfferDomainModelList.CreateFromCsvHeaderStringLine(headerLine);
+
+                    while (!stream.EndOfStream)
+                    {
+                        var line = await stream.ReadLineAsync() ?? throw new InvalidOperationException("Error eading line from csv file");
+                        
+                        readOfferModelList.AddOfferFromCsvStringLine(line);
+                    }
+                }
+            }
+
+            var todayDate = DateTime.Today.ToShortDateString();
+
+            if(readOfferModelList.PricePerDateCaptionList.Contains(DateTime.Today))
+            {
+                Console.WriteLine("Csv file contains offers with today's date");
+                return;
+            }
+
+            readOfferModelList.PricePerDateCaptionList.Add(DateTime.Today);
+
+            foreach (var href in offersAnchorHrefs)
+            {
+                var url = $"{verb.MainUrl}{href.Attributes.Where(p => p.Name == "href").Select(p => p.Value).FirstOrDefault()}";
+                Console.WriteLine(url);
+                var model = await DumpOffer(url);
+
+                readOfferModelList.AddOffer(model);
+            }
+
+            using (var stream = new StreamWriter(verb.OutputFilePath))
+            {
+                await stream.WriteLineAsync(readOfferModelList.GetCsvHeader());
+
+                foreach (var offer in readOfferModelList.Offers)
+                {
+                    await stream.WriteLineAsync(offer.GetCsvRow());
                 }
             }
         }
 
-        private static async Task DumpOffer(StreamWriter stream, string url)
+        private static async Task<OfferDomainModel> DumpOffer(string url)
         {
             var web = new HtmlWeb();
-            var doc = web.Load(url);
+            var doc = await web.LoadFromWebAsync(url);
+            
+            // sanity check code - sometimes title is null, looks like page is not alway loaded by HtmlAgilityPack
+            if (doc.DocumentNode.SelectNodes("//h1[@data-cy='adPageAdTitle']") == null)
+            {
+                Console.WriteLine($"null title on {url}, retrying");
+
+                await Task.Delay(3000);
+
+                doc = await web.LoadFromWebAsync(url);
+                if (doc.DocumentNode.SelectNodes("//h1[@data-cy='adPageAdTitle']") == null)
+                {
+                    throw new Exception($"Surprising exception on {url}");
+                }
+
+                Console.WriteLine($"After retry title is loaded");
+            }
 
             var model = new OfferDomainModel();
+            model.Url = url;
+
             model.Title = doc.DocumentNode.SelectNodes("//h1[@data-cy='adPageAdTitle']").First().InnerText;
 
             var price = doc.DocumentNode.SelectNodes("//strong[@data-cy='adPageHeaderPrice']").First().InnerText.Replace("zł", string.Empty).Replace(" ", string.Empty);
-            model.Price = int.Parse(price);
+            model.PricePerDateList.Add(int.Parse(price));
 
             //var pricePerSquareMeter = doc.DocumentNode.SelectNodes("//div[@aria-label='Cena za metr kwadratowy']").First().InnerText.Replace("zł/m²", string.Empty).Replace(" ", string.Empty);
             //model.PricePerSquareMeter = int.Parse(pricePerSquareMeter);
@@ -73,7 +125,7 @@ namespace OtoDomOffersCrawler
                 model.HeatingType = heatingTypeNode.First().InnerText.Replace("Zapytaj", string.Empty).Replace(" ", string.Empty);
             }
 
-            await stream.WriteLineAsync(model.GetCsvRow(url));
+            return model;
         }
     }
 }
