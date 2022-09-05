@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -37,7 +38,7 @@ namespace OtoDomOffersCrawler.Models
             {
                 Url = values[0],
                 Title = values[1],
-                Surface = float.Parse(values[3]),
+                Surface = float.Parse(values[3], NumberStyles.Any, CultureInfo.InvariantCulture),
                 RentAmount = int.Parse(values[4]),
                 NumberOfRooms = int.Parse(values[5]),
                 HeatingType = values[6],

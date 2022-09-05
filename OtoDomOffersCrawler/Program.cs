@@ -2,6 +2,7 @@
 using HtmlAgilityPack;
 using OtoDomOffersCrawler.Models;
 using OtoDomOffersCrawler.Verbs;
+using System.Globalization;
 
 namespace OtoDomOffersCrawler 
 {
@@ -107,7 +108,7 @@ namespace OtoDomOffersCrawler
             model.NumberOfRooms = int.Parse(numberOfRooms);
 
             var surface = doc.DocumentNode.SelectNodes("//div[@aria-label='Powierzchnia']/div[2]/div").First().InnerText.Replace("m²", string.Empty).Replace(" ", string.Empty);
-            model.Surface = float.Parse(surface.Replace(",", "."));
+            model.Surface = float.Parse(surface, NumberStyles.Any, CultureInfo.CurrentCulture);
 
             var rentAmountNode = doc.DocumentNode.SelectNodes("//div[@aria-label='Czynsz']/div[2]/div");
             if (rentAmountNode != null)
